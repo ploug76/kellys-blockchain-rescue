@@ -345,11 +345,7 @@ addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowleft','arro
 addEventListener('keyup',e=>{KEY[e.key.toLowerCase()]=0});
 addEventListener('blur',()=>{for(const k in KEY)KEY[k]=0;TOUCH.clear()});
 function zoneAt(x,y){
- const d=CTL.dpad;const dx=x-d.x,dy=y-d.y,dist=Math.hypot(dx,dy);const out={};
- const inPad=portrait?(x<W*0.5&&y>gameH-10):(x<STRIP&&y>H*0.4);
- if(inPad){if(dist>d.r*0.2){const a=Math.atan2(dy,dx);const s=Math.round(a/(Math.PI/4));
-   if(s===0||s===1||s===-1)out.R=1;if(s===4||s===-4||s===3||s===-3)out.L=1;if(s===2||s===1||s===3)out.D=1;if(s===-2||s===-1||s===-3)out.U=1}
-  return out}
+ const out={};
  const A=CTL.A,B=CTL.B;const da=Math.hypot(x-A.x,y-A.y),db=Math.hypot(x-B.x,y-B.y);
  const inBtns=portrait?(x>=W*0.5&&y>gameH-10):(x>W-STRIP&&y>H*0.3);
  if(inBtns){if(da<db)out.J=1;else out.A=1}
@@ -360,11 +356,17 @@ function onDown(id,x,y){AU.unlock();
  if(state==='play'){
   if(inBtn(CTL.pause,x,y)){pauseGame();return}
   if(inBtn(CTL.mute,x,y)){toggleMute();return}
-  const z=zoneAt(x,y);if(Object.keys(z).length||(portrait&&y>gameH-10)||(!portrait&&(x<STRIP||x>W-STRIP))){TOUCH.set(id,{x,y,z});for(const k in z)if(k==='J'||k==='A')VIRT[k]=Math.max(VIRT[k]||0,3);return}
+  const z=zoneAt(x,y);if(Object.keys(z).length){TOUCH.set(id,{x,y,z});for(const k in z)if(k==='J'||k==='A')VIRT[k]=Math.max(VIRT[k]||0,3);return}
+  // swipe anywhere (no D-pad): hold after swiping to keep moving that way, lift to stop
+  TOUCH.set(id,{x,y,z:{},sw:{ax:x,ay:y}});
   if(G&&G.signT>0)G.signT=Math.min(G.signT,10);
   return}
  tapStart={x,y,id}}
-function onMove(id,x,y){const t=TOUCH.get(id);if(t){t.x=x;t.y=y;t.z=zoneAt(x,y)}}
+function swipeZone(t){const w=t.sw;let dx=t.x-w.ax,dy=t.y-w.ay,dist=Math.hypot(dx,dy);const out={};if(dist<14)return out;
+ if(dist>40){w.ax=t.x-dx/dist*40;w.ay=t.y-dy/dist*40}
+ const s=Math.round(Math.atan2(dy,dx)/(Math.PI/4));
+ if(s===0||s===1||s===-1)out.R=1;if(s===4||s===-4||s===3||s===-3)out.L=1;if(s===2||s===1||s===3)out.D=1;if(s===-2||s===-1||s===-3)out.U=1;return out}
+function onMove(id,x,y){const t=TOUCH.get(id);if(t){t.x=x;t.y=y;t.z=t.sw?swipeZone(t):zoneAt(x,y)}}
 function onUp(id,x,y){if(TOUCH.has(id)){TOUCH.delete(id);return}
  if(tapStart&&tapStart.id===id){const bt=hitMenu(x,y);if(bt)bt.fn();tapStart=null}}
 cv.addEventListener('touchstart',e=>{e.preventDefault();for(const t of e.changedTouches)onDown(t.identifier,t.clientX,t.clientY)},{passive:false});
@@ -712,14 +714,7 @@ function drawHUD(){const lw=!portrait;const x0=SAFE.l+8,y0=SAFE.t+8;
 function drawControls(){
  if(portrait){const y=gameH;ctx.fillStyle='#141a30';ctx.fillRect(0,y,W,H-y);ctx.fillStyle='#46d6ff';ctx.fillRect(0,y,W,3)}
  else{ctx.fillStyle='#141a30';ctx.fillRect(0,0,STRIP,H);ctx.fillRect(W-STRIP,0,STRIP,H);ctx.fillStyle='#46d6ff';ctx.fillRect(STRIP-3,0,3,H);ctx.fillRect(W-STRIP,0,3,H)}
- const d=CTL.dpad,a=d.r*0.62/2,L=d.r;const held={L:IN.L,R:IN.R,U:IN.U,D:IN.D};
- ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(d.x-a+3,d.y-L+3,a*2,L*2);ctx.fillRect(d.x-L+3,d.y-a+3,L*2,a*2);
- ctx.fillStyle='#4a4f68';ctx.fillRect(d.x-a,d.y-L,a*2,L*2);ctx.fillRect(d.x-L,d.y-a,L*2,a*2);
- const arm=(k,x,y,w,h)=>{if(held[k]){ctx.fillStyle='#46d6ff';ctx.fillRect(x,y,w,h)}};
- arm('U',d.x-a,d.y-L,a*2,L-a);arm('D',d.x-a,d.y+a,a*2,L-a);arm('L',d.x-L,d.y-a,L-a,a*2);arm('R',d.x+a,d.y-a,L-a,a*2);
- ctx.fillStyle='#fff';const tri=(x,y,dx,dy)=>{ctx.beginPath();ctx.moveTo(x+dx*9,y+dy*9);ctx.lineTo(x-dy*8-dx*3,y+dx*8-dy*3);ctx.lineTo(x+dy*8-dx*3,y-dx*8-dy*3);ctx.closePath();ctx.fill()};
- tri(d.x,d.y-L*0.62,0,-1);tri(d.x,d.y+L*0.62,0,1);tri(d.x-L*0.62,d.y,-1,0);tri(d.x+L*0.62,d.y,1,0);
- ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(d.x-a,d.y-L,a*2,L*2);ctx.strokeRect(d.x-L,d.y-a,L*2,a*2);
+ const d=CTL.dpad;txt('SWIPE TO MOVE',d.x,d.y,portrait?Math.max(14,Math.min(17,W*0.04)):Math.max(12,Math.min(15,STRIP*0.09)),'#8fa6d8');
  for(const [k,B,col,lbl] of [['J',CTL.A,'#1f9d55','JUMP'],['A',CTL.B,'#2f7dff','ZAP']]){const on=IN[k];
   ctx.beginPath();ctx.arc(B.x+3,B.y+4,B.r,0,7);ctx.fillStyle='rgba(0,0,0,.45)';ctx.fill();
   ctx.beginPath();ctx.arc(B.x,B.y+(on?2:0),B.r,0,7);ctx.fillStyle=on?'#ffd34d':col;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle='#fff';ctx.stroke();
@@ -753,7 +748,7 @@ function drawTitle(){drawTitleScene();
  iconBtn(CTL.mute,'mute')}
 const HOW=[
  ['THE STORY',["Oh no! THE GLITCH broke the Blockchain into pieces!","Kelly and her robot buddy BITSY must fix it.","Collect XRP coins along the way, and find each world's special coin: XLM, HBAR, ALGO, XDC, IOTA, QNT and a big XRP coin.","Bring the special coin to the broken chain link at the end of each level to fix it!"]],
- ['CONTROLS',["◀ ▶  walk","JUMP: jump (hold for higher)","JUMP again in the air: Bitsy BOOSTS you higher!","ZAP: Bitsy zaps bugs, bats, bricks and ? blocks.","Bonk ? blocks from below for XRP coins."]],
+ ['CONTROLS',["Swipe left / right and hold to walk. Lift to stop.","Swipe down and hold to drop through thin platforms.","JUMP: jump (hold for higher)","JUMP again in the air: Bitsy BOOSTS you higher!","ZAP: Bitsy zaps bugs, bats, bricks and ? blocks.","Bonk ? blocks from below for XRP coins."]],
  ['TIPS',["Stomp bugs and bats. Red spiky bugs can't be stomped: ZAP them!","Special coins hide in brick cages. ZAP the bricks open!","Hearts heal you. 100 XRP coins = 1 extra life. Flags are checkpoints.","Beat THE GLITCH in the last level to fix the whole Blockchain!","Keys: arrows/WASD, Z or Space = JUMP, X = ZAP, P = pause, M = sound."]],
  ['ABOUT',["Kelly & Bitsy: Blockchain Rescue is a free, just-for-fun game.","The coins are cartoon pickups. Nothing here is real money or advice."]]];
 function drawHow(){drawTitleScene();ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(0,0,W,H);
