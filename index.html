@@ -321,16 +321,17 @@ function layoutCtl(){
  const top=SAFE.t+8,rgt=W-SAFE.r-8;
  if(portrait){CTL.pause={x:rgt-48,y:top,w:48,h:48};CTL.mute={x:rgt-104,y:top,w:48,h:48};
   const cy=H-SAFE.b-ctlH/2+SAFE.b/2+4;const r=clamp(Math.min(W*0.2,ctlH*0.36),56,84);
-  CTL.dpad={x:SAFE.l+16+r,y:cy,r};
+  /* Oct 30: JUMP bottom-right, ZAP bottom-left (mirrored); swipe hint centered */
+  CTL.dpad={x:W/2,y:cy,r};
   const br=clamp(W*0.105,36,46);
-  CTL.A={x:W-SAFE.r-16-br,y:cy-br*0.45,r:br};
-  CTL.B={x:W-SAFE.r-16-br*3.3,y:cy+br*0.45,r:br};
+  CTL.A={x:W-SAFE.r-16-br,y:cy,r:br};
+  CTL.B={x:SAFE.l+16+br,y:cy,r:br};
  }else{
   const r=clamp(H*0.15,50,70);const cy=H-SAFE.b-r-18;
-  CTL.dpad={x:Math.max(SAFE.l+18+r,STRIP/2),y:cy,r:Math.min(r,STRIP/2-10)};
   const br=clamp(H*0.11,36,46),bx=W-STRIP/2;
-  CTL.A={x:bx+br*0.35,y:H-SAFE.b-br-14,r:Math.min(br,STRIP/2-6)};
-  CTL.B={x:bx-br*0.35,y:H-SAFE.b-br*3.3-14,r:Math.min(br,STRIP/2-6)};
+  CTL.A={x:bx,y:H-SAFE.b-br-14,r:Math.min(br,STRIP/2-6)};
+  CTL.B={x:STRIP/2,y:H-SAFE.b-br-14,r:Math.min(br,STRIP/2-6)};
+  CTL.dpad={x:Math.max(SAFE.l+18+r,STRIP/2),y:Math.min(cy,CTL.B.y-CTL.B.r-28),r:Math.min(r,STRIP/2-10)};
   CTL.pause={x:rgt-48,y:top,w:48,h:48};CTL.mute={x:rgt-104,y:top,w:48,h:48};
   if(CTL.mute.x<W-STRIP){CTL.mute={x:rgt-48,y:top+56,w:48,h:48}}
  }
@@ -347,7 +348,7 @@ addEventListener('blur',()=>{for(const k in KEY)KEY[k]=0;TOUCH.clear()});
 function zoneAt(x,y){
  const out={};
  const A=CTL.A,B=CTL.B;const da=Math.hypot(x-A.x,y-A.y),db=Math.hypot(x-B.x,y-B.y);
- const inBtns=portrait?(x>=W*0.5&&y>gameH-10):(x>W-STRIP&&y>H*0.3);
+ const inBtns=portrait?(y>gameH-10&&(da<A.r*1.8||db<B.r*1.8)):((x>W-STRIP&&y>H*0.3)||(x<STRIP&&db<B.r*1.7));
  if(inBtns){if(da<db)out.J=1;else out.A=1}
  return out}
 function inBtn(r,x,y,p=4){return x>=r.x-p&&x<=r.x+r.w+p&&y>=r.y-p&&y<=r.y+r.h+p}
